@@ -3,7 +3,6 @@ import socket
 import sqlite3
 import json
 import datetime
-import time
 
 from configparser import ConfigParser
 
@@ -126,22 +125,22 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
 
     while True:
         try:
-            client, address = server.accept()
-            handle = client.recv(4096).decode('utf-8')
-
-            if handle:
-                data = json.loads(handle)
-                data_params = tuple(data['params'].split())
-
-                if data_params:
-                    response = getattr(Database, data['func'])(data_params)
-                else:
-                    response = getattr(Database, data['func'])()
-                client.send(str(response).encode('utf-8'))
-
-        except BlockingIOError:
             try:
+                client, address = server.accept()
+                handle = client.recv(4096).decode('utf-8')
+
+                if handle:
+                    data = json.loads(handle)
+                    data_params = tuple(data['params'].split())
+
+                    if data_params:
+                        response = getattr(Database, data['func'])(data_params)
+                    else:
+                        response = getattr(Database, data['func'])()
+                    client.send(str(response).encode('utf-8'))
+
+            except BlockingIOError:
                 if keyboard.is_pressed('q'):
                     quit()
-            except KeyboardInterrupt:
-                quit()
+        except KeyboardInterrupt:
+            quit()

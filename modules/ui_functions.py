@@ -7,7 +7,6 @@ import string
 import threading
 import hashlib
 import socket
-import time
 from configparser import ConfigParser
 
 from PySide6.QtGui import QIcon, QColor
@@ -58,10 +57,12 @@ class UIFunctions:
         self.ip = config.get('SERVER', 'ip')
         self.port = config.getint('SERVER', 'port')
 
+        self.exit = threading.Event()
+
         threading.Thread(target=self.check_connection).start()
 
     def check_connection(self):
-        while True:
+        while not self.exit.is_set():
 
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
                 try:
@@ -73,8 +74,8 @@ class UIFunctions:
                 except socket.gaierror:
                     self.ip = socket.gethostbyname(socket.gethostname())
                     self.state_server = True
-
-            time.sleep(10)
+            print('asd')
+            self.exit.wait(10)
 
     def maximize_restore(self):
         """Maximize and restore window application"""
@@ -528,6 +529,10 @@ class UIFunctions:
             if w.objectName() != widget:
                 w.setStyleSheet(UIFunctions.deselect_menu(w.styleSheet()))
 
+    def close(self):
+        self.exit.set()
+        self.main_window.close()
+
     def ui_definitions(self, main_window):
         main_window.setWindowFlags(Qt.FramelessWindowHint)
         main_window.setAttribute(Qt.WA_TranslucentBackground)
@@ -565,4 +570,4 @@ class UIFunctions:
         self.ui.maximizeRestoreAppBtn.clicked.connect(lambda: self.maximize_restore())
 
         # CLOSE APPLICATION
-        self.ui.closeAppBtn.clicked.connect(lambda: self.main_window.close())
+        self.ui.closeAppBtn.clicked.connect(lambda: self.close())
