@@ -65,16 +65,17 @@ class UIFunctions:
         while not self.exit.is_set():
 
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+
                 try:
                     client.connect((self.ip, self.port))
                     self.state_server = True
-
-                except ConnectionRefusedError:
-                    self.state_server = False
                 except socket.gaierror:
-                    self.ip = socket.gethostbyname(socket.gethostname())
-                    self.state_server = True
-            print('asd')
+                    try:
+                        client.connect((socket.gethostbyname(socket.gethostname()), self.port))
+                        self.state_server = True
+                    except ConnectionRefusedError:
+                        self.state_server = False
+
             self.exit.wait(10)
 
     def maximize_restore(self):
