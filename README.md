@@ -19,6 +19,6 @@ or
 ## UI
 ![scanner-1](http://95.216.65.93:13617/static/images/github/scanner-1@0,75x.png)
 ___
-![scanner-2](http://95.216.65.93:13617/static/images/github/scanner-2@0,75x.png)
+![scanner-2](http://95.216.65.93:13617/static/images/github/scanner-2@0,75x-2.png)
 ___
 ![scanner-3](http://95.216.65.93:13617/static/images/github/scanner-3@0,75x.png)
