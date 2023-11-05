@@ -102,18 +102,6 @@ class Database:
                 "SELECT * FROM users WHERE username == ?", (username,)
             ).fetchone()
 
-    @classmethod
-    def is_user_exist(cls, request: tuple) -> str:
-        username, password = request
-        password = hashlib.sha256(password.encode('utf-8')).hexdigest()
-        with cls.connection:
-            resp = cls.connection.cursor().execute(
-                "SELECT username, password FROM users WHERE username == ? AND password == ?", (username, password)
-            ).fetchone()
-            if resp:
-                cls.console(f'{resp[0]} connected')
-            return '1' if resp else '0'
-
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
     config = ConfigParser()
@@ -121,7 +109,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
     ip = config.get('SERVER', 'ip')
     port = config.getint('SERVER', 'port')
 
-    server.bind((ip, port))
+    if ip != '0' and port:
+        server.bind((ip, port))
+    else:
+        server.bind((socket.gethostbyname(socket.gethostname()), 12345))
     server.listen()
 
     Database.console('start server...')

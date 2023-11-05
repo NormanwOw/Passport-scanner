@@ -5,6 +5,7 @@ import string
 import random
 import platform
 import threading
+from configparser import ConfigParser
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import QHeaderView
@@ -15,7 +16,10 @@ from modules.style import Styles
 from widgets import custom_grips
 from database import Database
 
-DEBUG = True
+config = ConfigParser()
+config.read('config.ini')
+
+DEBUG = config.getint('APP', 'DEBUG')
 
 
 class MainWindow(QMainWindow, Database):
@@ -24,11 +28,14 @@ class MainWindow(QMainWindow, Database):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.functions = UIFunctions(self.ui, self)
+        self.db = Database()
         self.styles = Styles(self.functions, self)
         self.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scanner", None))
         self.username = ''
 
         self.state = False
+
+        threading.Thread(target=self.db.get_local_ip).start()
 
         if DEBUG:
             self.username = 'DEBUG'
@@ -61,7 +68,6 @@ class MainWindow(QMainWindow, Database):
         Styles.set_shadow(self)
 
         # DATABASE TABLE
-        # //////////////////////////////////////////////////////////////////////////////////////////////////////////////
         self.ui.table_db.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.ui.table_db.setDisabled(True)
 

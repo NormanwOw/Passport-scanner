@@ -3,6 +3,8 @@ import datetime
 import json
 import os
 import re
+import string
+import threading
 from configparser import ConfigParser
 
 from PySide6.QtGui import QIcon, QColor
@@ -25,6 +27,7 @@ DEBUG = config.getint('APP', 'DEBUG')
 class UIFunctions:
 
     def __init__(self, ui, main_window):
+        super().__init__()
         self.serial = ''
         self.number = ''
         self.given = ''
@@ -40,6 +43,7 @@ class UIFunctions:
 
         self.ui = ui
         self.scanner = Scanner(ui)
+        self.db = Database()
         self.main_window = main_window
         self.state = False
 
@@ -107,11 +111,11 @@ class UIFunctions:
     def authorization(self):
         login = self.ui.login_line_edit.text()
         password = self.ui.password_line_edit.text()
-        user = self.is_user_exist(login, password)
+        user = self.db.get_user(login)
         if user:
             if self.ui.reg_log_button.text() == 'Registration':
                 if user == '0':
-                    self.add_user(
+                    self.db.add_user(
                         login, password, datetime.datetime.now().strftime('%d.%m.%Y')
                     )
                     self.login(login)
@@ -168,7 +172,7 @@ class UIFunctions:
             data = self.ui.db_combobox.currentText()
             serial = re.search(r'\s\d{4}', data).group()[1:]
             number = re.search(r'\s\d{6}', data).group()[1:]
-            self.remove_passport(self.username, serial, number)
+            self.db.remove_passport(self.username, serial, number)
             self.update_db_table()
 
     def apply_data(self):
@@ -209,13 +213,13 @@ class UIFunctions:
             if all([serial, number]):
                 if len(serial) == 4 and len(number) == 6:
                     self.apply_data()
-                    if serial + ' ' + number == self.load_serials(username):
-                        self.update_passport(
+                    if serial + ' ' + number == self.db.load_serials(username):
+                        self.db.update_passport(
                             username, self.name_f, self.name_i, self.name_o, self.born_date, self.born_place,
                             self.male, self.given_date, self.given_code, self.given, self.serial, self.number
                         )
                     else:
-                        self.add_passport(
+                        self.db.add_passport(
                             username, self.name_f, self.name_i, self.name_o, self.born_date, self.born_place,
                             self.male, self.given_date, self.given_code, self.given, self.serial, self.number
                         )
@@ -235,7 +239,7 @@ class UIFunctions:
             self.name_o = self.ui.line_o.text().upper()
 
             if all([self.name_f, self.name_f, self.name_f]):
-                user = self.load_passport(self.ui.username_label.text(), self.name_f, self.name_i, self.name_o)
+                user = self.db.load_passport(self.ui.username_label.text(), self.name_f, self.name_i, self.name_o)
 
                 if user is not None:
                     self.name_f, self.name_i, self.name_o, self.born_date, self.born_place, \
@@ -258,7 +262,7 @@ class UIFunctions:
             obj.setText('')
 
     def load_database(self, username):
-        database = Database.load_for_db(username)
+        database = self.db.load_for_db(username)
         if database:
             self.ui.db_combobox.clear()
             for ch in ['[', ']', '(', ')', ',', '\'']:
