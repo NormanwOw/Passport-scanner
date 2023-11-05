@@ -115,13 +115,15 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
     ip = config.get('SERVER', 'ip')
     port = config.getint('SERVER', 'port')
 
-    if ip != '0' and port:
+    try:
         server.bind((ip, port))
-    else:
-        server.bind((socket.gethostbyname(socket.gethostname()), 12345))
+    except socket.gaierror:
+        ip = socket.gethostbyname(socket.gethostname())
+        server.bind((ip, port))
+
     server.listen()
     server.setblocking(False)
-    Database.console('start server...')
+    Database.console(f'start server on {ip}:{port}')
 
     while True:
         try:
@@ -140,7 +142,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
                     client.send(str(response).encode('utf-8'))
 
             except BlockingIOError:
-                if keyboard.is_pressed('q'):
+                if keyboard.is_pressed('ctrl+c'):
                     quit()
         except KeyboardInterrupt:
             quit()
