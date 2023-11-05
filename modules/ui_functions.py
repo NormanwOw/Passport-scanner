@@ -6,6 +6,8 @@ import re
 import string
 import threading
 import hashlib
+import socket
+import time
 from configparser import ConfigParser
 
 from PySide6.QtGui import QIcon, QColor
@@ -30,6 +32,13 @@ class UIFunctions:
 
     def __init__(self, ui, main_window):
         super().__init__()
+        self.ui = ui
+        self.scanner = Scanner(ui)
+        self.db = Database()
+        self.main_window = main_window
+
+        self.state_window = False
+
         self.serial = ''
         self.number = ''
         self.given = ''
@@ -45,12 +54,27 @@ class UIFunctions:
 
         self.username = ''
 
-        self.ui = ui
-        self.scanner = Scanner(ui)
-        self.db = Database()
-        self.main_window = main_window
-        self.state_window = False
         self.state_server = False
+        self.ip = config.get('SERVER', 'ip')
+        self.port = config.getint('SERVER', 'port')
+
+        threading.Thread(target=self.check_connection).start()
+
+    def check_connection(self):
+        while True:
+
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+                try:
+                    client.connect((self.ip, self.port))
+                    self.state_server = True
+
+                except ConnectionRefusedError:
+                    self.state_server = False
+                except socket.gaierror:
+                    self.ip = socket.gethostbyname(socket.gethostname())
+                    self.state_server = True
+
+            time.sleep(10)
 
     def maximize_restore(self):
         """Maximize and restore window application"""
@@ -176,15 +200,15 @@ class UIFunctions:
         self.ui.search_line.setText(res[0])
 
     def start_scan(self):
-        if not DEBUG:
-            if '/' in self.ui.search_line.text():
-                self.serial, self.number, self.given, self.given_code, self.given_date, self.name_f, self.name_i, \
-                    self.name_o, self.male, self.born_date, self.born_place = self.scanner.scan()
-                self.set_data()
-            else:
-                self.ui.label_scan.setText('Выберите файл')
+        if DEBUG:
+            return self.ui.label_scan.setText('DEBUG')
+
+        if '/' in self.ui.search_line.text():
+            self.serial, self.number, self.given, self.given_code, self.given_date, self.name_f, self.name_i, \
+                self.name_o, self.male, self.born_date, self.born_place = self.scanner.scan()
+            self.set_data()
         else:
-            self.ui.label_scan.setText('DEBUG')
+            self.ui.label_scan.setText('Выберите файл')
 
     def update_db_table(self):
         self.clear_database()
@@ -192,7 +216,7 @@ class UIFunctions:
         self.load_database(self.username)
 
     def remove(self):
-        if self.ui.db_combobox.currentText() != '':
+        if self.ui.db_combobox.currentText() != '' and self.state_server:
             data = self.ui.db_combobox.currentText()
             serial = re.search(r'\s\d{4}', data).group()[1:]
             number = re.search(r'\s\d{6}', data).group()[1:]
@@ -230,52 +254,53 @@ class UIFunctions:
         self.ui.line_given.setText(self.given)
 
     def save(self):
-        if not DEBUG:
-            serial = self.ui.line_serial.text()
-            number = self.ui.line_number.text()
+        if DEBUG:
+            return self.ui.label_scan.setText('DEBUG')
 
-            if all([serial, number]):
-                if len(serial) == 4 and len(number) == 6:
-                    self.apply_data()
-                    if serial + ' ' + number == self.db.load_serials(self.username):
-                        self.db.update_passport(
-                            self.username, self.name_f, self.name_i, self.name_o, self.born_date, self.born_place,
-                            self.male, self.given_date, self.given_code, self.given, self.serial, self.number
-                        )
-                    else:
-                        self.db.add_passport(
-                            self.username, self.name_f, self.name_i, self.name_o, self.born_date, self.born_place,
-                            self.male, self.given_date, self.given_code, self.given, self.serial, self.number
-                        )
-                    self.ui.label_scan.setText('Сохранено')
-                else:
-                    self.ui.label_scan.setText('Поля не заполнены неверно')
-                self.update_db_table()
-            else:
-                self.ui.label_scan.setText('Заполните все поля')
+        if not self.state_server:
+            return self.ui.label_scan.setText('Сервер не отвечает')
+
+        serial = self.ui.line_serial.text()
+        number = self.ui.line_number.text()
+
+        if len(serial) != 4 or len(number) != 6:
+            self.ui.label_scan.setText('Поля заполнены неверно')
+            return
+
+        self.apply_data()
+        if serial + ' ' + number == self.db.load_serials(self.username):
+            self.db.update_passport(
+                self.username, self.name_f, self.name_i, self.name_o, self.born_date, self.born_place,
+                self.male, self.given_date, self.given_code, self.given, self.serial, self.number
+            )
         else:
-            self.ui.label_scan.setText('DEBUG')
+            self.db.add_passport(
+                self.username, self.name_f, self.name_i, self.name_o, self.born_date, self.born_place,
+                self.male, self.given_date, self.given_code, self.given, self.serial, self.number
+            )
+        self.ui.label_scan.setText('Сохранено')
+        self.update_db_table()
 
     def load(self):
-        if not DEBUG:
-            self.name_f = self.ui.line_f.text().upper()
-            self.name_i = self.ui.line_i.text().upper()
-            self.name_o = self.ui.line_o.text().upper()
+        if DEBUG:
+            return self.ui.label_scan.setText('DEBUG')
 
-            if all([self.name_f, self.name_f, self.name_f]):
-                user = self.db.load_passport(self.ui.username_label.text(), self.name_f, self.name_i, self.name_o)
+        self.name_f = self.ui.line_f.text().upper()
+        self.name_i = self.ui.line_i.text().upper()
+        self.name_o = self.ui.line_o.text().upper()
 
-                if user is not None:
-                    self.name_f, self.name_i, self.name_o, self.born_date, self.born_place, \
-                    self.male, self.given_date, self.given_code, self.given, self.serial, self.number = user[1:]
-                    self.set_data()
-                    self.ui.label_scan.setText('')
-                else:
-                    self.ui.label_scan.setText('Запись не найдена')
-            else:
-                self.ui.label_scan.setText('Введите ФИО')
+        if all([self.name_f, self.name_f, self.name_f]):
+            user = self.db.load_passport(self.ui.username_label.text(), self.name_f, self.name_i, self.name_o)
+
+            if user is None:
+                return self.ui.label_scan.setText('Запись не найдена')
+
+            self.name_f, self.name_i, self.name_o, self.born_date, self.born_place, \
+                self.male, self.given_date, self.given_code, self.given, self.serial, self.number = user[1:]
+            self.set_data()
+            self.ui.label_scan.setText('')
         else:
-            self.ui.label_scan.setText('DEBUG')
+            self.ui.label_scan.setText('Введите ФИО')
 
     def clear(self):
         for obj in [

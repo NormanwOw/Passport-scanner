@@ -5,8 +5,6 @@ import string
 import random
 import platform
 import threading
-import socket
-import time
 from configparser import ConfigParser
 
 from PySide6 import QtCore
@@ -35,11 +33,8 @@ class MainWindow(QMainWindow, Database):
         self.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scanner", None))
 
         self.state_server = False
-        self.ip = config.get('SERVER', 'ip')
-        self.port = config.getint('SERVER', 'port')
 
         threading.Thread(target=self.db.get_local_ip).start()
-        threading.Thread(target=self.check_connection).start()
 
         if DEBUG:
             threading.Thread(target=self.functions.login, args=('DEBUG',)).start()
@@ -108,22 +103,6 @@ class MainWindow(QMainWindow, Database):
 
         # SHOW APP
         self.show()
-
-    def check_connection(self):
-        while True:
-
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
-                try:
-                    client.connect((self.ip, self.port))
-                    self.state_server = True
-                    print(self.state_server)
-                except ConnectionRefusedError:
-                    self.state_server = False
-                except socket.gaierror:
-                    self.ip = socket.gethostbyname(socket.gethostname())
-                    self.state_server = False
-
-            time.sleep(10)
 
     # BUTTONS CLICK
     def button_click(self):
