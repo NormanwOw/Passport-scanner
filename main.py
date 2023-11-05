@@ -5,6 +5,8 @@ import string
 import random
 import platform
 import threading
+import socket
+import time
 from configparser import ConfigParser
 
 from PySide6 import QtCore
@@ -31,15 +33,16 @@ class MainWindow(QMainWindow, Database):
         self.db = Database()
         self.styles = Styles(self.functions, self)
         self.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scanner", None))
-        self.username = ''
 
-        self.state = False
+        self.state_server = False
+        self.ip = config.get('SERVER', 'ip')
+        self.port = config.getint('SERVER', 'port')
 
         threading.Thread(target=self.db.get_local_ip).start()
+        threading.Thread(target=self.check_connection).start()
 
         if DEBUG:
-            self.username = 'DEBUG'
-            threading.Thread(target=self.functions.login, args=(self.username,)).start()
+            threading.Thread(target=self.functions.login, args=('DEBUG',)).start()
             self.functions.left_buttons(True)
             self.functions.toggle_left_menu(True)
             self.functions.left_buttons(True)
@@ -106,6 +109,22 @@ class MainWindow(QMainWindow, Database):
         # SHOW APP
         self.show()
 
+    def check_connection(self):
+        while True:
+
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+                try:
+                    client.connect((self.ip, self.port))
+                    self.state_server = True
+                    print(self.state_server)
+                except ConnectionRefusedError:
+                    self.state_server = False
+                except socket.gaierror:
+                    self.ip = socket.gethostbyname(socket.gethostname())
+                    self.state_server = False
+
+            time.sleep(10)
+
     # BUTTONS CLICK
     def button_click(self):
         # GET BUTTON CLICKED
@@ -149,18 +168,7 @@ class MainWindow(QMainWindow, Database):
             self.ui.reg_log_button.setText('Registration')
 
         if btn_name == "reg_log_button":
-            login = self.ui.login_line_edit.text()
-            password = self.ui.login_line_edit.text()
-
-            if ' ' in login or ' ' in password:
-                self.ui.reg_label.setText('*неверный ввод')
-            else:
-                if 4 < len(login) < 17 and 4 < len(password) < 17:
-                    if self.functions.filter_string(login):
-                        self.username = login
-                        self.functions.authorization()
-                else:
-                    self.ui.reg_label.setText('*от 5 до 16 символов')
+            self.functions.authorization()
 
         if btn_name == 'scan_button':
             self.functions.start_scan()
@@ -172,7 +180,7 @@ class MainWindow(QMainWindow, Database):
             self.functions.clear()
 
         if btn_name == 'save_button':
-            self.functions.save(self.username)
+            self.functions.save()
 
         if btn_name == 'load_button':
             self.functions.load()

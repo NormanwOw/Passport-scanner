@@ -5,11 +5,13 @@ import os
 import re
 import string
 import threading
+import hashlib
 from configparser import ConfigParser
 
 from PySide6.QtGui import QIcon, QColor
 from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, Qt
 from PySide6.QtWidgets import QTableWidgetItem, QGraphicsDropShadowEffect, QSizeGrip, QPushButton, QFileDialog
+from PySide6.QtTest import QTest
 
 from modules.app_settings import Settings
 from modules.scanner import Scanner
@@ -41,18 +43,21 @@ class UIFunctions:
         self.born_place = ''
         self.path = ''
 
+        self.username = ''
+
         self.ui = ui
         self.scanner = Scanner(ui)
         self.db = Database()
         self.main_window = main_window
-        self.state = False
+        self.state_window = False
+        self.state_server = False
 
     def maximize_restore(self):
         """Maximize and restore window application"""
 
-        if not self.state:
+        if not self.state_window:
             self.main_window.showMaximized()
-            self.state = True
+            self.state_window = True
             self.ui.maximizeRestoreAppBtn.setToolTip("Restore")
             self.ui.maximizeRestoreAppBtn.setIcon(QIcon(u":/icons/images/icons/icon_restore.png"))
             self.ui.frame_size_grip.hide()
@@ -61,7 +66,7 @@ class UIFunctions:
             self.top_grip.hide()
             self.bottom_grip.hide()
         else:
-            self.state = False
+            self.state_window = False
             self.main_window.showNormal()
             self.ui.maximizeRestoreAppBtn.setToolTip("Maximize")
             self.ui.maximizeRestoreAppBtn.setIcon(QIcon(u":/icons/images/icons/icon_maximize.png"))
@@ -93,6 +98,7 @@ class UIFunctions:
         self.group_toggle_menu(True, False)
         self.clear_database()
         self.load_database(username)
+        self.db.user_connected(username)
 
     def left_buttons(self, state: bool):
         if state:
@@ -111,25 +117,43 @@ class UIFunctions:
     def authorization(self):
         login = self.ui.login_line_edit.text()
         password = self.ui.password_line_edit.text()
+
+        if not self.state_server:
+            return self.ui.reg_label.setText('Сервер не отвечает')
+
         user = self.db.get_user(login)
-        if user:
-            if self.ui.reg_log_button.text() == 'Registration':
-                if user == '0':
-                    self.db.add_user(
-                        login, password, datetime.datetime.now().strftime('%d.%m.%Y')
-                    )
-                    self.login(login)
-                else:
-                    self.ui.reg_label.setText('Пользователь уже существует')
-                    return
-            elif self.ui.reg_log_button.text() == 'Login':
-                if user == '0':
-                    self.ui.reg_label.setText('Пользователь не найден')
-                    return
-                else:
-                    self.login(login)
-        else:
-            self.ui.reg_label.setText('Сервер не отвечает')
+
+        if not 4 < len(login) < 17 or not 4 < len(password) < 17:
+            return self.ui.reg_label.setText('*от 5 до 16 символов')
+
+        if not self.filter_string(login) or not self.filter_string(password):
+            return self.ui.reg_label.setText('*неверный ввод')
+
+        if self.ui.reg_log_button.text() == 'Registration':
+            if user is None:
+                self.db.add_user(
+                    login, password, datetime.datetime.now().strftime('%d.%m.%Y')
+                )
+                self.login(login)
+            else:
+                self.ui.reg_label.setText('Пользователь уже существует')
+
+        elif self.ui.reg_log_button.text() == 'Login':
+            if user is None:
+                self.ui.reg_label.setText('Пользователь не найден')
+                return
+
+            user_list = user.split(', ')
+            user = user_list[1].replace('\'', '')
+
+            pw_hash = str(hashlib.sha256(password.encode('utf-8')).hexdigest())
+            password = user_list[2].replace('\'', '')
+
+            if login != user or pw_hash != password:
+                self.ui.reg_label.setText('Неверный логин или пароль')
+            else:
+                self.login(login)
+                self.username = login
 
     @staticmethod
     def filter_string(input_str: str):
@@ -205,7 +229,7 @@ class UIFunctions:
         self.ui.line_given_code.setText(self.given_code)
         self.ui.line_given.setText(self.given)
 
-    def save(self, username):
+    def save(self):
         if not DEBUG:
             serial = self.ui.line_serial.text()
             number = self.ui.line_number.text()
@@ -213,14 +237,14 @@ class UIFunctions:
             if all([serial, number]):
                 if len(serial) == 4 and len(number) == 6:
                     self.apply_data()
-                    if serial + ' ' + number == self.db.load_serials(username):
+                    if serial + ' ' + number == self.db.load_serials(self.username):
                         self.db.update_passport(
-                            username, self.name_f, self.name_i, self.name_o, self.born_date, self.born_place,
+                            self.username, self.name_f, self.name_i, self.name_o, self.born_date, self.born_place,
                             self.male, self.given_date, self.given_code, self.given, self.serial, self.number
                         )
                     else:
                         self.db.add_passport(
-                            username, self.name_f, self.name_i, self.name_o, self.born_date, self.born_place,
+                            self.username, self.name_f, self.name_i, self.name_o, self.born_date, self.born_place,
                             self.male, self.given_date, self.given_code, self.given, self.serial, self.number
                         )
                     self.ui.label_scan.setText('Сохранено')

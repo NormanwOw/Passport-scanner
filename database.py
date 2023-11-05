@@ -75,6 +75,9 @@ class Database:
     def add_user(self, username: str, password: str, date: str):
         self.__connection('add_user', username, password, date)
 
-    def get_user(self, username: str) -> str or False:
-        return self.__connection('get_user', username)
+    def get_user(self, username: str) -> str or False or None:
+        res = self.__connection('get_user', username)
+        return None if res == 'None' else res
 
+    def user_connected(self, username: str) -> str or False:
+        self.__connection('user_connected', username)

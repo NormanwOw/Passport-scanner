@@ -7,6 +7,8 @@ import time
 
 from configparser import ConfigParser
 
+import keyboard
+
 
 class Database:
     connection = sqlite3.connect('database.db')
@@ -102,6 +104,11 @@ class Database:
                 "SELECT * FROM users WHERE username == ?", (username,)
             ).fetchone()
 
+    @classmethod
+    def user_connected(cls, request: tuple):
+        username = request[0]
+        cls.console(f'{username} connected')
+
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
     config = ConfigParser()
@@ -114,20 +121,27 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
     else:
         server.bind((socket.gethostbyname(socket.gethostname()), 12345))
     server.listen()
-
+    server.setblocking(False)
     Database.console('start server...')
 
     while True:
-        client, address = server.accept()
-        handle = client.recv(4096).decode('utf-8')
+        try:
+            client, address = server.accept()
+            handle = client.recv(4096).decode('utf-8')
 
-        if handle:
-            data = json.loads(handle)
-            data_params = tuple(data['params'].split())
+            if handle:
+                data = json.loads(handle)
+                data_params = tuple(data['params'].split())
 
-            if data_params:
-                response = getattr(Database, data['func'])(data_params)
-            else:
-                response = getattr(Database, data['func'])()
+                if data_params:
+                    response = getattr(Database, data['func'])(data_params)
+                else:
+                    response = getattr(Database, data['func'])()
+                client.send(str(response).encode('utf-8'))
 
-            client.send(str(response).encode('utf-8'))
+        except BlockingIOError:
+            try:
+                if keyboard.is_pressed('q'):
+                    quit()
+            except KeyboardInterrupt:
+                quit()
