@@ -6,6 +6,19 @@
 Desktop application for scan passport (RU) with UI, remote server and database
 
 ## Install
-1. `pip install -r requirements.txt`
-2. `python server.py`
-3. `python main.py`
+1. unzip `Tesseract-OCR.rar` into the root of project
+2. `pip install -r requirements.txt`
+3. `python server.py`
+4. `python main.py`
+
+or
+
+1. run `Server.exe`
+2. run `Scanner.exe`
+
+## UI
+![scanner-1](http://95.216.65.93:13617/static/images/github/scanner-1@0,75x.png)
+___
+![scanner-2](http://95.216.65.93:13617/static/images/github/scanner-2@0,75x.png)
+___
+![scanner-3](http://95.216.65.93:13617/static/images/github/scanner-3@0,75x.png)
