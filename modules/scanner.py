@@ -13,7 +13,7 @@ rus.insert(6, 'Ё')
 eng = ['A', 'B', 'V', 'G', 'D', 'E', '2', 'J', 'Z', 'I', 'Q', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'U', 'F',
        'H', 'C', '3', '4', 'W', 'X', 'Y', '9', '6', '7', '8']
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Users\USER\AppData\Local\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'Tesseract-OCR\tesseract.exe'
 
 
 class Scanner:

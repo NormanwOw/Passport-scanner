@@ -150,6 +150,7 @@ class UIFunctions:
                     login, password, datetime.datetime.now().strftime('%d.%m.%Y')
                 )
                 self.login(login)
+                self.username = login
             else:
                 self.ui.reg_label.setText('Пользователь уже существует')
 

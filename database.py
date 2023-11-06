@@ -22,7 +22,7 @@ class Database:
         """Connect to database server"""
 
         params = ['None' if arg == '' else arg for arg in args]
-        print(params)
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
             try:
                 params_str = ' '.join(params)

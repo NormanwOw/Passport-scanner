@@ -3,6 +3,7 @@ import socket
 import sqlite3
 import json
 import datetime
+import time
 
 from configparser import ConfigParser
 
@@ -10,7 +11,7 @@ import keyboard
 
 
 class Database:
-    connection = sqlite3.connect('server\\database.db')
+    connection = sqlite3.connect('database.db')
 
     @classmethod
     def __message_wrapper(cls, message: str) -> str:
