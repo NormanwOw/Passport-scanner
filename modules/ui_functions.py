@@ -32,24 +32,13 @@ class UIFunctions:
     def __init__(self, ui, main_window):
         super().__init__()
         self.ui = ui
-        self.scanner = Scanner(ui)
         self.db = Database()
         self.main_window = main_window
 
         self.state_window = False
 
-        self.serial = ''
-        self.number = ''
-        self.given = ''
-        self.given_code = ''
-        self.given_date = ''
-        self.name_f = ''
-        self.name_i = ''
-        self.name_o = ''
-        self.male = ''
-        self.born_date = ''
-        self.born_place = ''
-        self.path = ''
+        self.name_f = self.name_i = self.name_o = self.born_date = self.born_place = self.male\
+            = self.given_date = self.given_code = self.given = self.serial = self.number = None
 
         self.username = ''
 
@@ -205,9 +194,9 @@ class UIFunctions:
         if DEBUG:
             return self.ui.label_scan.setText('DEBUG')
 
-        if '/' in self.ui.search_line.text():
-            self.serial, self.number, self.given, self.given_code, self.given_date, self.name_f, self.name_i, \
-                self.name_o, self.male, self.born_date, self.born_place = self.scanner.scan()
+        path = self.ui.search_line.text()
+        if '/' in path:
+            self.name_f, self.name_i, self.name_o, self.serial, self.number, self.born_date = Scanner.scan(path)
             self.set_data()
         else:
             self.ui.label_scan.setText('Выберите файл')
@@ -247,13 +236,8 @@ class UIFunctions:
         self.ui.line_i.setText(self.name_i)
         self.ui.line_o.setText(self.name_o)
         self.ui.line_born_date.setText(self.born_date)
-        self.ui.line_born_place.setText(self.born_place)
-        self.ui.line_male.setText(self.male)
         self.ui.line_serial.setText(f'{self.serial}')
         self.ui.line_number.setText(f'{self.number}')
-        self.ui.line_given_date.setText(self.given_date)
-        self.ui.line_given_code.setText(self.given_code)
-        self.ui.line_given.setText(self.given)
 
     def save(self):
         if DEBUG:

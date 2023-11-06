@@ -10,7 +10,7 @@ import keyboard
 
 
 class Database:
-    connection = sqlite3.connect('database.db')
+    connection = sqlite3.connect('server\\database.db')
 
     @classmethod
     def __message_wrapper(cls, message: str) -> str:
@@ -24,10 +24,14 @@ class Database:
     def console(cls, message: str) -> print:
         return print(cls.__message_wrapper(message))
 
+    @staticmethod
+    def __unpack_request(request: tuple) -> tuple:
+        return tuple([None if item == 'None' else item for item in request])
+
     @classmethod
     def add_passport(cls, request: tuple):
         username, name_f, name_i, name_o, born_date, born_place, \
-        male, given_date, given_code, given, serial, number = request
+        male, given_date, given_code, given, serial, number = cls.__unpack_request(request)
 
         with cls.connection:
             cls.connection.cursor().execute(
@@ -39,28 +43,31 @@ class Database:
 
     @classmethod
     def remove_passport(cls, request: tuple):
-        username, serial, number = request
+        username, serial, number = cls.__unpack_request(request)
         with cls.connection:
             cls.connection.cursor().execute(
-                "DELETE FROM passports WHERE serial = ? AND number = ?",
-                (serial, number)
+                "DELETE FROM passports WHERE username = ? AND serial = ? AND number = ?",
+                (username, serial, number)
             )
 
     @classmethod
     def update_passport(cls, request: tuple):
         username, name_f, name_i, name_o, born_date, born_place, \
-        male, given_date, given_code, given, serial, number = request
+        male, given_date, given_code, given, serial, number = cls.__unpack_request(request)
         with cls.connection:
             cls.connection.cursor().execute(
                 "UPDATE passports SET name_f = ?, name_i = ?, name_o = ?, born_date = ?, born_place = ?, "
-                "male = ?, given_date = ?, given_code = ?, given = ? WHERE serial = ? AND number = ?",
-                (name_f, name_i, name_o, born_date, born_place, male, given_date, given_code, given, serial, number)
+                "male = ?, given_date = ?, given_code = ?, given = ? WHERE username = ? AND serial = ? AND number = ?",
+                (
+                    name_f, name_i, name_o, born_date, born_place, male, given_date,
+                    given_code, given, username, serial, number
+                )
             )
 
     @classmethod
     def load_passport(cls, request: tuple) -> tuple:
         if request:
-            username, name_f, name_i, name_o = request
+            username, name_f, name_i, name_o = cls.__unpack_request(request)
             with cls.connection:
                 return cls.connection.cursor().execute(
                     "SELECT * FROM passports WHERE username = ? AND name_f = ? AND name_i = ? AND name_o = ?",
@@ -88,7 +95,7 @@ class Database:
 
     @classmethod
     def add_user(cls, request: tuple):
-        username, password, reg_date = request
+        username, password, reg_date = cls.__unpack_request(request)
         password = hashlib.sha256(password.encode('utf-8')).hexdigest()
         with cls.connection:
             cls.connection.cursor().execute(

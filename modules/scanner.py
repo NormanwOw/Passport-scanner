@@ -1,79 +1,149 @@
+import imutils
+from imutils.contours import sort_contours
+import numpy as np
 import pytesseract
-from PIL import Image
+import sys
+import cv2
+import re
+import string
 
-pytesseract.pytesseract.tesseract_cmd = '..\\Tesseract-OCR\\tesseract.exe'
+
+rus = [(lambda c: chr(c))(i) for i in range(1040, 1072)]
+rus.insert(6, 'Ё')
+eng = ['A', 'B', 'V', 'G', 'D', 'E', '2', 'J', 'Z', 'I', 'Q', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'U', 'F',
+       'H', 'C', '3', '4', 'W', 'X', 'Y', '9', '6', '7', '8']
+
+pytesseract.pytesseract.tesseract_cmd = r'C:\Users\USER\AppData\Local\Tesseract-OCR\tesseract.exe'
 
 
 class Scanner:
 
-    def __init__(self, ui):
-        self.data = 'asd'
-        self.ui = ui
-        self.config = r'--oem 3 --psm 1'
-        self.config_2 = r'--oem 3 --psm 4'
+    @staticmethod
+    def __resize(image: str) -> list:
+        img = cv2.imread(image)
+        final_wide = 1400
+        r = float(final_wide) / img.shape[1]
+        dim = (final_wide, int(img.shape[0] * r))
+        img = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (3, 3), 0)
+        thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        morph = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+        morph = cv2.morphologyEx(morph, cv2.MORPH_CLOSE, kernel)
+        contours = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = contours[0] if len(contours) == 2 else contours[1]
+        area_thresh = 0
+        big_contour = 0
+
+        for c in contours:
+            area = cv2.contourArea(c)
+            if area > area_thresh:
+                area_thresh = area
+                big_contour = c
+
+        page = np.zeros_like(img)
+        cv2.drawContours(page, [big_contour], 0, (255, 255, 255), -1)
+        peri = cv2.arcLength(big_contour, True)
+        corners = cv2.approxPolyDP(big_contour, 0.04 * peri, True)
+        polygon = img.copy()
+        cv2.polylines(polygon, [corners], True, (0, 0, 255), 3, cv2.LINE_AA)
+        nr = np.empty((0, 2), dtype="int32")
+
+        for a in corners:
+            for b in a:
+                nr = np.vstack([nr, b])
+
+        y_arr = [i[0] for i in nr]
+        x_arr = [i[1] for i in nr]
+
+        x = min(y_arr)
+        p_X = max(y_arr)
+        y = min(x_arr)
+        p_Y = max(x_arr)
+
+        return img[y:p_Y, x:p_X]
 
     @staticmethod
-    def __find_date(data: str) -> str:
-        """Find passport date by pattern XX.XX.XXXX"""
+    def __passport_read(photo: list) -> tuple:
+        gray = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY)
+        H, W = gray.shape
+        rect_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 7))
+        sq_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21))
+        gray = cv2.GaussianBlur(gray, (3, 3), 0)
+        black_hat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, rect_kernel)
+        grad = cv2.Sobel(black_hat, ddepth=cv2.CV_32F, dx=1, dy=0, ksize=-1)
+        grad = np.absolute(grad)
+        min_val, maxVal = np.min(grad), np.max(grad)
+        grad = (grad - min_val) / (maxVal - min_val)
+        grad = (grad * 255).astype("uint8")
+        grad = cv2.morphologyEx(grad, cv2.MORPH_CLOSE, rect_kernel)
+        thresh = cv2.threshold(grad, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, sq_kernel)
+        thresh = cv2.erode(thresh, None, iterations=2)
+        contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = imutils.grab_contours(contours)
+        contours = sort_contours(contours, method="bottom-to-top")[0]
+        mrz_box = None
 
-        return re.search(r'\d{2}\s?[.]\s?\d{2}\s?[.]\s?\d{4}', data, re.ASCII).group(0).replace(' ', '')
+        for c in contours:
+            (x, y, w, h) = cv2.boundingRect(c)
+            percent_width = w / float(W)
+            percent_height = h / float(H)
+            if percent_width > 0.28 and percent_height > 0.005:
+                mrz_box = (x, y, w, h)
+                break
 
-    @staticmethod
-    def __date_index(data: str) -> int:
-        """Find date index by pattern XX.XX.XXXX"""
+        (x, y, w, h) = mrz_box
+        p_x = int((x + w) * 0.03)
+        p_y = int((y + h) * 0.1)
+        x, y = x - p_x, y - p_y
+        w, h = w + (p_x * 2), h + (p_y * 2)
 
-        return re.search(r'\d{2}\s?[.]\s?\d{2}\s?[.]\s?\d{4}', data, re.ASCII).end()
+        mrz = photo[y:y + h, x:x + w]
+        config = f' --oem 3 --psm 6 -c tessedit_char_whitelist={string.ascii_uppercase + string.digits}><'
+        mrz_text = pytesseract.image_to_string(mrz, lang='eng', config=config)
+        mrz_text = mrz_text.replace(" ", "")
+        mrz_text = mrz_text.split()
+        if mrz_text[0][0:1] != 'P':
+            del mrz_text[0]
+        el1 = mrz_text[0]
+        el2 = mrz_text[1]
+        el1 = el1.replace('1', 'I')
+        el2 = el2.replace('O', '0')
+        el1 = el1[5:]
+        el1 = re.split("<<|<|\n", el1)
+        el2 = re.split("RUS|<", el2)
+        el1 = list(filter(None, el1))
+        el1 = list(map(list, el1))
+        el1 = el1[0:3]
+        el2 = list(filter(None, el2))
+        for i in el1:
+            for j, ch in enumerate(i):
+                ind = eng.index(str(ch))
+                i[j] = rus[ind]
 
-    @staticmethod
-    def __find_serial(data: str) -> int:
-        """Find passport serial number"""
+        name_f = ''.join(el1[0])
+        name_i = ''.join(el1[1])
+        name_o = ''.join(el1[2])
+        serial = el2[0][0:3] + el2[2][0:1]
+        number = el2[0][3:9]
+        date = el2[1][0:6]
 
-        s_number = data[:re.search(r'\d{6}', data, re.ASCII).start()].replace(' ', '')
-        if len(s_number) == 4:
-            return s_number
+        replace_dict = {'I': '1', 'T': '1', 'S': '2', 'B': '8', 'O': '0'}
+
+        for char, num in replace_dict.items():
+            date = date.replace(char, num)
+
+        if int(date[0:1]) > 2:
+            date = '19' + date
         else:
-            data = data[re.search(r'\d{6}', data, re.ASCII).end():]
-            s_number = data[:re.search(r'\d{6}', data, re.ASCII).start()].replace(' ', '')
-            return s_number
+            date = '20' + date
+        date = date[6:8] + '.' + date[4:6] + '.' + date[0:4]
 
-    @staticmethod
-    def __find_number(data: str) -> str:
-        """Find passport number"""
+        return name_f, name_i, name_o, serial, number, date
 
-        number_list = re.findall(r'\d{6}', data, re.ASCII)
-        if number_list[0] != number_list[1]:
-            self.ui.label_scan.setText('*Номер | Возможно: ' + number_list[0])
-
-        return re.findall(r'\d{6}', data, re.ASCII)[1]
-
-    def scan(self):
-        img = Image.open(self.ui.search_line.text().replace('/', '\\'))
-        result = pytesseract.image_to_string(img, lang='rus', config=self.config)
-        result = "".join(result).replace('\n', ' ').replace('  ', ' ')
-        result_serial = pytesseract.image_to_string(img, config=self.config_2)
-        result_serial = " ".join(re.findall(r'\d+', result_serial, re.ASCII)).replace('  ', ' ')
-        given = " ".join(re.findall(r'[А-Я]+', result[:self.__date_index(result)], re.ASCII))
-        if 'ГОР ' in given:
-            given = given.replace('ГОР ', 'ГОР.')
-
-        given_date = self.__find_date(result)
-        given_code = re.search(r'\d{3}\s?—\s?\d{3}', result).group(0)
-        born_date = self.__find_date(result[self.__date_index(result):])
-        name_list = re.findall(r'[А-Я]{3,}', result[self.__date_index(result):], re.ASCII)
-        name_f, name_i, name_o = name_list[0], name_list[1], name_list[2]
-
-        temp = result[self.__date_index(result):]
-        male = temp[self.__date_index(temp) - 20:self.__date_index(temp) - 10]
-        if 'МУ' in male:
-            male = 'МУЖ.'
-        else:
-            male = 'ЖЕН.'
-        born_place = temp[self.__date_index(temp):self.__date_index(temp) + 25]
-        born_place = " ".join(re.findall(r'[А-Я]{3,}', born_place, re.ASCII))
-        if 'ГОР ' in born_place:
-            born_place = born_place.replace('ГОР ', 'ГОР.')
-
-        serial = int(self.__find_serial(result_serial))
-        number = int(self.__find_number(result_serial))
-
-        return serial, number, given, given_code, given_date, name_f, name_i, name_o, male, born_date, born_place
+    @classmethod
+    def scan(cls, image: str) -> tuple:
+        photo = cls.__resize(image)
+        return cls.__passport_read(photo)

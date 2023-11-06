@@ -21,9 +21,11 @@ class Database:
     def __connection(self, func: str, *args):
         """Connect to database server"""
 
+        params = ['None' if arg == '' else arg for arg in args]
+        print(params)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
             try:
-                params_str = ' '.join(args)
+                params_str = ' '.join(params)
                 msg = {'func': func, 'params': params_str}
                 msg = json.dumps(msg)
 
