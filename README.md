@@ -1,5 +1,5 @@
 # Passport-scanner
-![](https://img.shields.io/badge/PySide-v6.6.0-blue) ![](https://img.shields.io/badge/Qt-Designer-green) 
+![](https://img.shields.io/badge/Python-v3.9-green) ![](https://img.shields.io/badge/PySide-v6.6.0-blue) ![](https://img.shields.io/badge/Qt-Designer-yellow) 
 ![](https://img.shields.io/badge/Pytesseract-v0.3.10-red) ![](https://img.shields.io/badge/SQLite-v3-white)
 
 ## About
