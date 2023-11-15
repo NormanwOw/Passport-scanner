@@ -3,7 +3,7 @@
 ![](https://img.shields.io/badge/Pytesseract-v0.3.10-red) ![](https://img.shields.io/badge/SQLite-v3-white)
 
 ## About
-Desktop application for scan passport (RU) with UI, remote server and database
+Desktop application for scan passport (RU) with GUI, remote server and database
 
 ## Install
 1. unzip `Tesseract-OCR.rar` into the `modules` folder
@@ -28,7 +28,7 @@ DEBUG - 1 or 0
 ```
 * **DEBUG mode is state without authorisation, registration and scan functions**
 
-## UI
+## GUI
 ![scanner-1](http://95.216.65.93:13617/static/images/github/scanner-1@0,75x.png)
 ___
 ![scanner-2](http://95.216.65.93:13617/static/images/github/scanner-2@0,75x-2.png)
