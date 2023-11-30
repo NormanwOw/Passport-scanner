@@ -22,7 +22,7 @@ config.read('config.ini')
 DEBUG = config.getint('APP', 'DEBUG')
 
 
-class MainWindow(QMainWindow, Database):
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.ui = Ui_MainWindow()
