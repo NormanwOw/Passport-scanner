@@ -29,8 +29,9 @@ DEBUG - 1 or 0
 * **DEBUG mode is state without authorisation, registration and scan functions**
 
 ## GUI
-![scanner-1](http://95.216.65.93:13617/static/images/github/scanner-1@0,75x.png)
+![scanner-1@0,75x](https://github.com/NormanwOw/Passport-scanner/assets/118648914/f4748301-ca82-4cc4-a352-498bd6d1d53d)
 ___
-![scanner-2](http://95.216.65.93:13617/static/images/github/scanner-2@0,75x-2.png)
+![scanner-2@0,75x](https://github.com/NormanwOw/Passport-scanner/assets/118648914/80444969-8b13-4ea8-a149-8dcac8221fda)
 ___
-![scanner-3](http://95.216.65.93:13617/static/images/github/scanner-3@0,75x.png)
+![scanner-3@0,75x](https://github.com/NormanwOw/Passport-scanner/assets/118648914/43e2bb65-a182-468f-9916-1b4b9f5cf544)
+
