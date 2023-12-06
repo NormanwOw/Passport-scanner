@@ -26,7 +26,7 @@ port - default 12345
 [APP] 
 DEBUG - 1 or 0
 ```
-* **DEBUG mode is state without authorisation, registration and scan functions**
+* **DEBUG mode is state without authorization, registration and scan functions**
 
 ## GUI
 ![scanner-1@0,75x](https://github.com/NormanwOw/Passport-scanner/assets/118648914/f4748301-ca82-4cc4-a352-498bd6d1d53d)
